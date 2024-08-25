@@ -7,12 +7,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.UUID;
 
+import org.apache.commons.io.FilenameUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.becoder.model.Product;
+import com.becoder.repository.ProductRepository;
 import com.becoder.service.FileService;
 
 @Service
@@ -20,6 +26,9 @@ public class FileServiceImpl implements FileService {
 
 	@Value("${file.upload.path}")
 	private String uploadPath;
+
+	@Autowired
+	private ProductRepository productRepository;
 
 	@Override
 	public Boolean uploadFile(MultipartFile file) throws IOException {
@@ -38,6 +47,34 @@ public class FileServiceImpl implements FileService {
 		}
 		return false;
 	}
+	
+	
+
+	@Override
+	public String uploadFileWithData(MultipartFile file) throws IOException {
+		String fileName = file.getOriginalFilename();
+		File savefile = new File(uploadPath);
+
+		String rndString = UUID.randomUUID().toString();
+		// my_photo.jpeg -> my_photo_jhsfhjkbsf.jpeg -> my_photo.jpeg 
+		String removeExtension = FilenameUtils.removeExtension(fileName); // -> my_photo
+		String extension = FilenameUtils.getExtension(fileName);
+		fileName =removeExtension+"_"+rndString+"."+extension;
+		
+		
+		if (!savefile.exists()) {
+			savefile.mkdir();
+		}
+		String storePath = uploadPath.concat(fileName);
+
+		long upload = Files.copy(file.getInputStream(), Paths.get(storePath));
+		if (upload != 0) {
+			return fileName;
+		}
+		return null;
+	}
+
+
 
 	@Override
 	public byte[] downloadFile(String file) throws Exception {
@@ -54,6 +91,15 @@ public class FileServiceImpl implements FileService {
 			e.printStackTrace();
 			throw e;
 		}
+	}
+
+	@Override
+	public Boolean saveProduct(Product product) {
+		Product save = productRepository.save(product);
+		if (!ObjectUtils.isEmpty(save)) {
+			return true;
+		}
+		return false;
 	}
 
 }
